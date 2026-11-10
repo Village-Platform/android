@@ -15,7 +15,7 @@ val apiUrlRelease = providers.gradleProperty("AGHOUR_API_URL_RELEASE").getOrElse
 // passwords live outside the repo; without the file, release builds are simply left unsigned.
 val uploadKeyProps = Properties().apply {
     val path = providers.gradleProperty("AGHOUR_UPLOAD_KEY_PROPERTIES")
-        .getOrElse("${System.getProperty("user.home")}/.android-keys/aghour-legacy.properties")
+        .getOrElse("${System.getProperty("user.home")}/.android-keys/aghour-upload.properties")
     file(path).takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
