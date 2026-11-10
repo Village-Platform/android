@@ -72,6 +72,17 @@ interface AghourApi {
     @PATCH("me")
     suspend fun updateMe(@Body body: UpdateMeRequest): ItemResponse<UserDto>
 
+    @PATCH("me")
+    suspend fun updateProfile(@Body body: UpdateProfileRequest): ItemResponse<UserDto>
+
+    /** Multipart part "avatar"; PNG/JPEG/WEBP up to 2MB. */
+    @Multipart
+    @PUT("me/avatar")
+    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): ItemResponse<UserDto>
+
+    @DELETE("me/avatar")
+    suspend fun deleteAvatar(): ItemResponse<UserDto>
+
     /** 204 on success. Plain Unit (not Response<Unit>) so a 422 wrong password throws into safeApiCall. */
     @HTTP(method = "DELETE", path = "me", hasBody = true)
     suspend fun deleteMe(@Body body: DeleteMeRequest)
@@ -148,6 +159,22 @@ interface AghourApi {
     /** 204 No Content. A Response<Unit> does not throw on 4xx; check isSuccessful. */
     @DELETE("firms/{id}")
     suspend fun deleteFirm(@Path("id") id: Long): Response<Unit>
+
+    // Images of a firm or an article: one per request, at most five (422 past that).
+
+    @Multipart
+    @POST("firms/{id}/attachments")
+    suspend fun addFirmAttachment(@Path("id") id: Long, @Part file: MultipartBody.Part): ItemResponse<FirmDto>
+
+    @DELETE("firms/{id}/attachments/{attachmentId}")
+    suspend fun deleteFirmAttachment(@Path("id") id: Long, @Path("attachmentId") attachmentId: Long): ItemResponse<FirmDto>
+
+    @Multipart
+    @POST("articles/{id}/attachments")
+    suspend fun addArticleAttachment(@Path("id") id: Long, @Part file: MultipartBody.Part): ItemResponse<ArticleDto>
+
+    @DELETE("articles/{id}/attachments/{attachmentId}")
+    suspend fun deleteArticleAttachment(@Path("id") id: Long, @Path("attachmentId") attachmentId: Long): ItemResponse<ArticleDto>
 
     @GET("categories/{id}")
     suspend fun category(@Path("id") id: Long): ItemResponse<CategoryDto>

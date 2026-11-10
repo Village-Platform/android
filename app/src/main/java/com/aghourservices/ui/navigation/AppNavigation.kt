@@ -85,6 +85,7 @@ import com.aghourservices.ui.home.HomeScreen
 import com.aghourservices.ui.news.ArticleScreen
 import com.aghourservices.ui.news.NewsScreen
 import com.aghourservices.ui.owner.ChangePasswordScreen
+import com.aghourservices.ui.owner.EditProfileScreen
 import com.aghourservices.ui.owner.DeleteAccountScreen
 import com.aghourservices.ui.owner.MyFirmsScreen
 import com.aghourservices.ui.owner.NotificationsScreen
@@ -133,6 +134,9 @@ data object PaymentsRoute
 data object NotificationsRoute
 @Serializable
 data object ChangePasswordRoute
+
+@Serializable
+data object EditProfileRoute
 @Serializable
 data object DeleteAccountRoute
 @Serializable
@@ -433,6 +437,7 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
                     onPlans = if (plansOn) ({ nav.go(PlansRoute) }) else null,
                     onPayments = if (plansOn) ({ nav.go(PaymentsRoute) }) else null,
                     onNotifications = { nav.go(NotificationsRoute) },
+                    onEditProfile = { nav.go(EditProfileRoute) },
                     onChangePassword = { nav.go(ChangePasswordRoute) },
                     onMyFirms = { nav.go(MyFirmsRoute) },
                     onAddFirm = { nav.go(NewFirmRoute) },
@@ -530,6 +535,7 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
                 )
             }
             composable<ChangePasswordRoute> { ChangePasswordScreen(onBack = { nav.back() }) }
+            composable<EditProfileRoute> { EditProfileScreen(onBack = { nav.back() }) }
             composable<DeleteAccountRoute> { DeleteAccountScreen(onBack = { nav.back() }) }
             composable<MyFirmsRoute> {
                 MyFirmsScreen(

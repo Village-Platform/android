@@ -31,7 +31,10 @@ import com.aghourservices.data.remote.FirmDto
 import com.aghourservices.data.repository.AdminRepository
 import com.aghourservices.data.repository.CatalogRepository
 import com.aghourservices.data.repository.FirmInput
+import com.aghourservices.ui.components.AttachmentsDraft
+import com.aghourservices.ui.components.AttachmentsEditor
 import com.aghourservices.ui.components.FilterChipsRow
+import com.aghourservices.ui.components.applyAttachments
 import com.aghourservices.ui.components.FormField
 import com.aghourservices.ui.components.LocationPicker
 import com.aghourservices.ui.components.MutedText
@@ -63,6 +66,9 @@ data class FirmFormUiState(
     val longitude: String = "",
     val workingHours: String = "",
     val status: String = "active",
+    /** Images: sent after the firm itself is saved (one request each). */
+    val attachments: AttachmentsDraft = AttachmentsDraft(),
+    val imageError: Int? = null,
     val nameError: Int? = null,
     val categoryError: Int? = null,
     val coordinatesError: Int? = null,
@@ -83,6 +89,9 @@ class FirmFormViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(FirmFormUiState())
     val state: StateFlow<FirmFormUiState> = _state.asStateFlow()
+
+    /** The firm on the server: set after a create, so a retry after a failed upload edits it instead. */
+    private var savedFirmId: Long? = firmId
 
     init {
         load()
@@ -107,7 +116,9 @@ class FirmFormViewModel(
     }
 
     fun update(transform: FirmFormUiState.() -> FirmFormUiState) =
-        _state.update { it.transform().copy(error = null, nameError = null, categoryError = null, coordinatesError = null) }
+        _state.update { it.transform().copy(error = null, nameError = null, categoryError = null, coordinatesError = null, imageError = null) }
+
+    fun onImagesUnreadable() = _state.update { it.copy(imageError = R.string.error_image_unreadable) }
 
     fun submit() {
         val s = _state.value
@@ -137,16 +148,26 @@ class FirmFormViewModel(
         )
         _state.update { it.copy(submitting = true) }
         viewModelScope.launch {
-            val result = if (firmId == null) admin.createFirm(input) else admin.updateFirm(firmId, input)
-            when (result) {
-                is ApiResult.Success -> _state.update {
-                    it.copy(
-                        submitting = false,
-                        savedId = result.data.id,
-                        sentForReview = result.data.status == "pending",
-                    )
+            val id = savedFirmId
+            val firm = when (val r = if (id == null) admin.createFirm(input) else admin.updateFirm(id, input)) {
+                is ApiResult.Success -> r.data
+                is ApiResult.Failure -> return@launch _state.update { it.copy(submitting = false, error = r.message) }
+            }
+            savedFirmId = firm.id
+            // The firm is saved; now its images. An added image may send it back to review.
+            val sync = applyAttachments(
+                _state.value.attachments,
+                remove = { admin.deleteFirmAttachment(firm.id, it) },
+                add = { admin.addFirmAttachment(firm.id, it) },
+                attachmentsOf = { it.attachments },
+            )
+            val latest = sync.last ?: firm
+            _state.update {
+                if (sync.error != null) {
+                    it.copy(submitting = false, attachments = sync.draft, error = sync.error)
+                } else {
+                    it.copy(submitting = false, attachments = sync.draft, savedId = latest.id, sentForReview = latest.status == "pending")
                 }
-                is ApiResult.Failure -> _state.update { it.copy(submitting = false, error = result.message) }
             }
         }
     }
@@ -163,6 +184,7 @@ private fun FirmFormUiState.filledFrom(firm: FirmDto) = copy(
     longitude = firm.longitude?.toString().orEmpty(),
     workingHours = firm.workingHours.orEmpty(),
     status = firm.status,
+    attachments = AttachmentsDraft(existing = firm.attachments),
 )
 
 @Composable
@@ -267,6 +289,14 @@ fun FirmFormScreen(firmId: Long?, canSetStatus: Boolean, onBack: () -> Unit, onS
             imeAction = ImeAction.Default,
             multiline = true,
         )
+        AttachmentsEditor(
+            draft = state.attachments,
+            onAdd = { images -> vm.update { copy(attachments = attachments.add(images)) } },
+            onUnreadable = vm::onImagesUnreadable,
+            onRemoveExisting = { id -> vm.update { copy(attachments = attachments.removeExisting(id)) } },
+            onRemoveAdded = { i -> vm.update { copy(attachments = attachments.removeAdded(i)) } },
+        )
+        FieldError(state.imageError)
     }
 
     if (showReviewDialog && state.savedId != null) {

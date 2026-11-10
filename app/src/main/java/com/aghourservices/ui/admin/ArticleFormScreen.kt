@@ -24,7 +24,10 @@ import com.aghourservices.data.remote.ApiResult
 import com.aghourservices.data.repository.AdminRepository
 import com.aghourservices.data.repository.ArticleInput
 import com.aghourservices.data.repository.CatalogRepository
+import com.aghourservices.ui.components.AttachmentsDraft
+import com.aghourservices.ui.components.AttachmentsEditor
 import com.aghourservices.ui.components.FormField
+import com.aghourservices.ui.components.applyAttachments
 import com.aghourservices.ui.components.MutedText
 import com.aghourservices.ui.components.Segmented
 import com.aghourservices.ui.components.SwitchRow
@@ -50,6 +53,9 @@ data class ArticleFormUiState(
     val published: Boolean = true,
     /** Kept when an already published article is edited, so its date does not move. */
     val publishedAt: String? = null,
+    /** Images: sent after the article itself is saved (one request each). */
+    val attachments: AttachmentsDraft = AttachmentsDraft(),
+    val imageError: Int? = null,
     val titleError: Int? = null,
     val bodyError: Int? = null,
     val submitting: Boolean = false,
@@ -66,6 +72,9 @@ class ArticleFormViewModel(
 ) : ViewModel() {
     private val _state = MutableStateFlow(ArticleFormUiState(loading = articleId != null))
     val state: StateFlow<ArticleFormUiState> = _state.asStateFlow()
+
+    /** The article on the server: set after a create, so a retry after a failed upload edits it instead. */
+    private var savedArticleId: Long? = articleId
 
     init {
         if (articleId != null) load()
@@ -84,6 +93,7 @@ class ArticleFormViewModel(
                         kind = r.data.kind,
                         published = r.data.publishedAt != null,
                         publishedAt = r.data.publishedAt,
+                        attachments = AttachmentsDraft(existing = r.data.attachments),
                     )
                 }
                 is ApiResult.Failure -> _state.update { it.copy(loading = false, loadError = r.message) }
@@ -92,7 +102,9 @@ class ArticleFormViewModel(
     }
 
     fun update(transform: ArticleFormUiState.() -> ArticleFormUiState) =
-        _state.update { it.transform().copy(error = null, titleError = null, bodyError = null) }
+        _state.update { it.transform().copy(error = null, titleError = null, bodyError = null, imageError = null) }
+
+    fun onImagesUnreadable() = _state.update { it.copy(imageError = R.string.error_image_unreadable) }
 
     fun submit() {
         val s = _state.value
@@ -108,16 +120,31 @@ class ArticleFormViewModel(
         val input = ArticleInput(s.title, s.body, s.kind, publishedAt)
         _state.update { it.copy(submitting = true) }
         viewModelScope.launch {
-            val result = if (articleId == null) admin.createArticle(input) else admin.updateArticle(articleId, input)
-            when (result) {
-                is ApiResult.Success -> _state.update {
+            val id = savedArticleId
+            val article = when (val r = if (id == null) admin.createArticle(input) else admin.updateArticle(id, input)) {
+                is ApiResult.Success -> r.data
+                is ApiResult.Failure -> return@launch _state.update { it.copy(submitting = false, error = r.message) }
+            }
+            savedArticleId = article.id
+            // The article is saved; now its images. An added image may send it back to review.
+            val sync = applyAttachments(
+                _state.value.attachments,
+                remove = { admin.deleteArticleAttachment(article.id, it) },
+                add = { admin.addArticleAttachment(article.id, it) },
+                attachmentsOf = { it.attachments },
+            )
+            val latest = sync.last ?: article
+            _state.update {
+                if (sync.error != null) {
+                    it.copy(submitting = false, attachments = sync.draft, error = sync.error)
+                } else {
                     it.copy(
                         submitting = false,
-                        savedId = result.data.id,
-                        sentForReview = result.data.reviewStatus == "pending" || result.data.publishedAt == null,
+                        attachments = sync.draft,
+                        savedId = latest.id,
+                        sentForReview = latest.reviewStatus == "pending" || latest.publishedAt == null,
                     )
                 }
-                is ApiResult.Failure -> _state.update { it.copy(submitting = false, error = result.message) }
             }
         }
     }
@@ -205,6 +232,14 @@ fun ArticleFormScreen(articleId: Long?, onBack: () -> Unit, onSaved: (Long) -> U
             imeAction = ImeAction.Default,
             multiline = true,
         )
+        AttachmentsEditor(
+            draft = state.attachments,
+            onAdd = { images -> vm.update { copy(attachments = attachments.add(images)) } },
+            onUnreadable = vm::onImagesUnreadable,
+            onRemoveExisting = { id -> vm.update { copy(attachments = attachments.removeExisting(id)) } },
+            onRemoveAdded = { i -> vm.update { copy(attachments = attachments.removeAdded(i)) } },
+        )
+        FieldError(state.imageError)
     }
 
     if (showReviewDialog && state.savedId != null) {
