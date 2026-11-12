@@ -28,8 +28,8 @@ android {
         minSdk = 26
         //noinspection OldTargetApi
         targetSdk = 36 // Google Play requires API 36+ for new apps (since Aug 31, 2026)
-        versionCode = 54
-        versionName = "10.0.0"
+        versionCode = 55
+        versionName = "10.0.1"
     }
 
     signingConfigs {
@@ -56,7 +56,10 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"$apiUrlDebug\"")
         }
         release {
-            isMinifyEnabled = false // enable R8 + rules before the first Play release
+            // R8: shrink + optimize + obfuscate. Play flags bundles below 25 % obfuscation (DEX
+            // optimization, enforced Feb 2027). Crashlytics uploads the mapping file automatically.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("String", "API_BASE_URL", "\"$apiUrlRelease\"")
             signingConfigs.findByName("upload")?.let { signingConfig = it }
@@ -86,6 +89,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.datastore.preferences)
+    // Not used directly: pins the version Play Services would otherwise pull in (1.1.0, flagged
+    // as outdated by Play Console).
+    implementation(libs.androidx.fragment)
 
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
