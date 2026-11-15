@@ -28,8 +28,8 @@ android {
         minSdk = 26
         //noinspection OldTargetApi
         targetSdk = 36 // Google Play requires API 36+ for new apps (since Aug 31, 2026)
-        versionCode = 55
-        versionName = "10.0.1"
+        versionCode = 56
+        versionName = "10.0.2"
     }
 
     signingConfigs {
