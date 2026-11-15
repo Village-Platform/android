@@ -7,7 +7,7 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:344587732104:android:d5d366f4a4a7682fc30b3d",
+        "mobilesdk_app_id": "1:344587732104:android:188969775b45b7b4c30b3d",
         "android_client_info": {
           "package_name": "com.aghourservices"
         }
@@ -32,8 +32,7 @@
             }
           ]
         }
-      },
-      "admob_app_id": "ca-app-pub-6023673239780727~5080774708"
+      }
     }
   ],
   "configuration_version": "1"
