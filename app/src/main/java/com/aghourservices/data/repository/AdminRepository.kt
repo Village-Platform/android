@@ -95,6 +95,12 @@ class AdminRepository(
     suspend fun deleteFirm(id: Long): ApiResult<Unit> =
         write(Entity.Firm, Action.Delete) { api.deleteFirm(id).orThrow() }
 
+    suspend fun addFirmAttachment(id: Long, jpeg: ByteArray): ApiResult<FirmDto> =
+        write(Entity.Firm, Action.Update) { api.addFirmAttachment(id, jpeg.imagePart()).data }
+
+    suspend fun deleteFirmAttachment(id: Long, attachmentId: Long): ApiResult<FirmDto> =
+        write(Entity.Firm, Action.Update) { api.deleteFirmAttachment(id, attachmentId).data }
+
     // ---- Categories ----
 
     suspend fun category(id: Long): ApiResult<CategoryDto> =
@@ -120,6 +126,12 @@ class AdminRepository(
 
     suspend fun deleteArticle(id: Long): ApiResult<Unit> =
         write(Entity.Article, Action.Delete) { api.deleteArticle(id).orThrow() }
+
+    suspend fun addArticleAttachment(id: Long, jpeg: ByteArray): ApiResult<ArticleDto> =
+        write(Entity.Article, Action.Update) { api.addArticleAttachment(id, jpeg.imagePart()).data }
+
+    suspend fun deleteArticleAttachment(id: Long, attachmentId: Long): ApiResult<ArticleDto> =
+        write(Entity.Article, Action.Update) { api.deleteArticleAttachment(id, attachmentId).data }
 
     // ---- Subscription plans ----
 
@@ -213,6 +225,10 @@ private fun CategoryInput.fields(): Map<String, RequestBody> = mapOf(
 private fun CategoryInput.iconPart(): MultipartBody.Part? = iconPng?.let {
     MultipartBody.Part.createFormData("category[icon_image]", "icon.png", it.toRequestBody("image/png".toMediaType()))
 }
+
+/** One picked image (already scaled down and re-encoded by loadPhotoJpeg). */
+internal fun ByteArray.imagePart(name: String = "file"): MultipartBody.Part =
+    MultipartBody.Part.createFormData(name, "image.jpg", toRequestBody("image/jpeg".toMediaType()))
 
 /** Turns a non-2xx Response into the HttpException that safeApiCall knows how to read. */
 private fun Response<Unit>.orThrow() {

@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.CreditCard
 import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.ManageAccounts
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Payments
@@ -80,7 +81,7 @@ import com.aghourservices.ui.components.CheckLine
 import com.aghourservices.ui.components.Chevron
 import com.aghourservices.ui.components.GhostButton
 import com.aghourservices.ui.components.GoldButton
-import com.aghourservices.ui.components.LetterAvatar
+import com.aghourservices.ui.components.UserAvatar
 import com.aghourservices.ui.components.MutedText
 import com.aghourservices.ui.components.ScreenTitle
 import com.aghourservices.ui.components.StatusBarIcons
@@ -133,6 +134,7 @@ fun AccountScreen(
     onPlans: (() -> Unit)?,
     onPayments: (() -> Unit)?,
     onNotifications: () -> Unit,
+    onEditProfile: () -> Unit,
     onChangePassword: () -> Unit,
     onMyFirms: () -> Unit,
     onAddFirm: () -> Unit,
@@ -184,6 +186,8 @@ fun AccountScreen(
                     MenuDivider()
                     MenuRow(Icons.Outlined.Palette, stringResource(R.string.appearance_menu), null, onSettings)
                     MenuDivider()
+                    MenuRow(Icons.Outlined.ManageAccounts, stringResource(R.string.edit_profile), null, onEditProfile)
+                    MenuDivider()
                     MenuRow(Icons.Outlined.Lock, stringResource(R.string.change_password), null, onChangePassword)
                     MenuDivider()
                     MenuRow(Icons.Outlined.Info, stringResource(R.string.about_app), null) { showAbout = true }
@@ -232,7 +236,7 @@ private fun ProfileHeader(user: UserDto) {
             Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LetterAvatar(user.name, size = 56.dp)
+            UserAvatar(user.name, user.avatarUrl, size = 56.dp)
             Spacer(Modifier.width(14.dp))
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(user.name, color = c.ink, style = MaterialTheme.typography.titleMedium)

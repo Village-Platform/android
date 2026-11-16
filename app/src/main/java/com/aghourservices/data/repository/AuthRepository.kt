@@ -8,6 +8,8 @@ import com.aghourservices.data.remote.RegisterRequest
 import com.aghourservices.data.remote.RegisterUser
 import com.aghourservices.data.remote.UpdateMeRequest
 import com.aghourservices.data.remote.UpdateMeUser
+import com.aghourservices.data.remote.UpdateProfileRequest
+import com.aghourservices.data.remote.UpdateProfileUser
 import com.aghourservices.data.remote.UserDto
 import com.aghourservices.data.remote.safeApiCall
 import com.aghourservices.data.session.SessionStore
@@ -92,6 +94,17 @@ class AuthRepository(
             }
             is ApiResult.Failure -> result
         }
+
+    /** Name and email (blank email clears it). Updates the stored user on success. */
+    suspend fun updateProfile(name: String, email: String): ApiResult<UserDto> =
+        storingUser { api.updateProfile(UpdateProfileRequest(UpdateProfileUser(name.trim(), email.trim().ifEmpty { null }))).data }
+
+    /** [jpeg] already scaled down (loadPhotoJpeg); null removes the picture. */
+    suspend fun setAvatar(jpeg: ByteArray?): ApiResult<UserDto> =
+        storingUser { if (jpeg == null) api.deleteAvatar().data else api.uploadAvatar(jpeg.imagePart("avatar")).data }
+
+    private suspend fun storingUser(block: suspend () -> UserDto): ApiResult<UserDto> =
+        safeApiCall(json, block).also { if (it is ApiResult.Success) session.updateUser(it.data) }
 
     suspend fun changePassword(password: String, confirmation: String): ApiResult<UserDto> =
         safeApiCall(json) { api.updateMe(UpdateMeRequest(UpdateMeUser(password, confirmation))).data }

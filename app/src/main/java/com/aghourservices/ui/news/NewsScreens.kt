@@ -49,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.aghourservices.R
 import com.aghourservices.data.remote.ArticleDto
+import com.aghourservices.ui.components.AttachmentsGallery
 import com.aghourservices.ui.components.Badge
 import com.aghourservices.ui.components.BadgeTone
 import com.aghourservices.ui.components.FeaturedNewsCard
@@ -208,6 +209,7 @@ fun ArticleScreen(articleId: Long, onBack: () -> Unit, onEdit: (() -> Unit)? = n
         }
         Text(article.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, color = c.ink, modifier = Modifier.asHeading())
         Text(article.author.name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = c.goldInk)
+        AttachmentsGallery(article.attachments)
         Text(article.body, style = MaterialTheme.typography.bodyLarge, color = c.ink)
     }
 }

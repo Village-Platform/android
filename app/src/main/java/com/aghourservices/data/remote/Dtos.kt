@@ -80,6 +80,16 @@ data class FirmDto(
     @SerialName("owner_id") val ownerId: Long? = null,
     /** What the signed-in user may do, from the server's FirmPolicy. null on older API versions. */
     val can: FirmCanDto? = null,
+    /** Up to five images (issue #169). Empty on older API versions. */
+    val attachments: List<AttachmentDto> = emptyList(),
+)
+
+/** An image of a firm or an article. [url] is relative to the API host (resolve with [apiAssetUrl]). */
+@Serializable
+data class AttachmentDto(
+    val id: Long,
+    val url: String,
+    @SerialName("content_type") val contentType: String? = null,
 )
 
 @Serializable
@@ -97,6 +107,7 @@ data class ArticleDto(
     @SerialName("published_at") val publishedAt: String? = null,
     @SerialName("review_status") val reviewStatus: String? = null,
     val author: AuthorDto,
+    val attachments: List<AttachmentDto> = emptyList(),
 )
 
 @Serializable
@@ -106,6 +117,8 @@ data class UserDto(
     val phone: String,
     val email: String? = null,
     val role: String,
+    /** Relative to the API host; null = no picture (the letter avatar is shown). */
+    @SerialName("avatar_url") val avatarUrl: String? = null,
 )
 
 /**
@@ -209,6 +222,13 @@ data class UpdateMeUser(
     val password: String,
     @SerialName("password_confirmation") val passwordConfirmation: String,
 )
+
+/** PATCH /me with the profile fields; email null clears it. */
+@Serializable
+data class UpdateProfileRequest(val user: UpdateProfileUser)
+
+@Serializable
+data class UpdateProfileUser(val name: String, val email: String?)
 
 @Serializable
 data class DeleteMeRequest(val password: String)

@@ -71,6 +71,7 @@ import com.aghourservices.ui.components.GhostButton
 import com.aghourservices.ui.components.MessageBox
 import com.aghourservices.ui.components.OverlayIconButton
 import com.aghourservices.ui.components.ScreenTitle
+import com.aghourservices.ui.components.AttachmentsGallery
 import com.aghourservices.ui.components.SheetLayout
 import com.aghourservices.ui.components.SkeletonRows
 import com.aghourservices.ui.components.SurfaceCard
@@ -320,6 +321,8 @@ private fun FirmDetailContent(
             HorizontalDivider(color = c.line, thickness = 1.dp)
             Text(desc, style = MaterialTheme.typography.bodyMedium, color = c.ink)
         }
+
+        AttachmentsGallery(firm.attachments)
 
         HorizontalDivider(color = c.line, thickness = 1.dp)
 
