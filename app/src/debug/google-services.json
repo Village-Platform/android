@@ -7,25 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:134325122645:android:6efd7d855ea1504ef606dc",
-        "android_client_info": {
-          "package_name": "com.aghourservices"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyADh_jHNH7ebo_WgqJoMwSk7nbCtyf8-S4"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:134325122645:android:bed2befc7ec362aef606dc",
         "android_client_info": {
           "package_name": "com.aghourservices.dev"
