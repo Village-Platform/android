@@ -10,28 +10,43 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.AddBusiness
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Newspaper
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.PostAdd
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,7 +54,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
@@ -62,6 +79,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.aghourservices.R
 import com.aghourservices.data.analytics.AnalyticsEvent
+import com.aghourservices.data.remote.canManageArticles
 import com.aghourservices.data.remote.canManageFirms
 import com.aghourservices.data.remote.isSuperAdmin
 import com.aghourservices.ui.account.AccountScreen
@@ -74,6 +92,8 @@ import com.aghourservices.ui.admin.CategoryFormScreen
 import com.aghourservices.ui.admin.FirmFormScreen
 import com.aghourservices.ui.admin.PlanFormScreen
 import com.aghourservices.ui.admin.PlansAdminScreen
+import com.aghourservices.ui.components.Chevron
+import com.aghourservices.ui.components.SurfaceCard
 import com.aghourservices.ui.components.appContainer
 import com.aghourservices.data.remote.NotificationClickAction
 import com.aghourservices.ui.components.MessageBox
@@ -268,6 +288,7 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
     // Shows the admin controls only; the server's policies still decide every request.
     val isAdmin = user.isSuperAdmin
     val canManageFirms = user.canManageFirms
+    val canManageArticles = user.canManageArticles
     val firmAccess = FirmAccess(userId = user?.id, isSuperAdmin = isAdmin)
     val nav = rememberNavController()
     LaunchedEffect(openLogin) {
@@ -312,11 +333,25 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
         }
     }
     val currentTab = destination?.let { d -> tabs.firstOrNull { it.matches(d) } }
+    val showCreateFab = currentTab != null && currentTab.route != AccountRoute && (canManageFirms || canManageArticles)
+    var showCreateSheet by rememberSaveable { mutableStateOf(false) }
     val c = Aghour.colors
 
     Scaffold(
         containerColor = c.page,
         contentColor = c.ink,
+        floatingActionButton = {
+            if (showCreateFab) {
+                FloatingActionButton(
+                    onClick = { showCreateSheet = true },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = c.gold,
+                    contentColor = c.onGold,
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.create_content))
+                }
+            }
+        },
         bottomBar = {
             if (currentTab != null) {
                 Column {
@@ -628,6 +663,101 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
                     onBack = { nav.back() },
                     onDone = { nav.back() })
             }
+        }
+    }
+
+    if (showCreateSheet && showCreateFab) {
+        CreateChooserSheet(
+            onDismiss = { showCreateSheet = false },
+            onAddFirm = if (canManageFirms) ({
+                showCreateSheet = false
+                nav.go(NewFirmRoute)
+            }) else null,
+            onAddArticle = if (canManageArticles) ({
+                showCreateSheet = false
+                nav.go(NewArticleRoute)
+            }) else null,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CreateChooserSheet(
+    onDismiss: () -> Unit,
+    onAddFirm: (() -> Unit)?,
+    onAddArticle: (() -> Unit)?,
+) {
+    val c = Aghour.colors
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = c.surface,
+        contentColor = c.ink,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = stringResource(R.string.create_choose_title),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Black,
+                color = c.ink,
+            )
+            if (onAddFirm != null) {
+                CreateOptionCard(
+                    icon = Icons.Outlined.AddBusiness,
+                    title = stringResource(R.string.add_firm),
+                    subtitle = stringResource(R.string.add_firm_hint),
+                    onClick = onAddFirm,
+                )
+            }
+            if (onAddArticle != null) {
+                CreateOptionCard(
+                    icon = Icons.Outlined.PostAdd,
+                    title = stringResource(R.string.add_article_option),
+                    subtitle = stringResource(R.string.add_article_hint),
+                    onClick = onAddArticle,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreateOptionCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+) {
+    val c = Aghour.colors
+    SurfaceCard(onClick = onClick, padding = 14.dp) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(c.gold.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = c.goldInk, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, color = c.ink)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = c.muted)
+            }
+            Spacer(Modifier.width(8.dp))
+            Chevron()
         }
     }
 }
