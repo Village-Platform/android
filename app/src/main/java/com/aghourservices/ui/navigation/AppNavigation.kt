@@ -51,6 +51,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -334,7 +335,11 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
     }
     val currentTab = destination?.let { d -> tabs.firstOrNull { it.matches(d) } }
     val showCreateFab = currentTab != null && currentTab.route != AccountRoute && (canManageFirms || canManageArticles)
-    var showCreateSheet by rememberSaveable { mutableStateOf(false) }
+    var showCreateSheet by remember { mutableStateOf(false) }
+    // The button can vanish while the sheet is open (deep link, logout): drop the request so the sheet
+    // does not pop back up when the user returns to a tab.
+    LaunchedEffect(showCreateFab) { if (!showCreateFab) showCreateSheet = false }
+    val fabClearance = if (showCreateFab) FAB_CLEARANCE else 0.dp
     val c = Aghour.colors
 
     Scaffold(
@@ -457,10 +462,11 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
                         else -> null
                     },
                     onNotifications = { nav.go(NotificationsRoute) },
+                    bottomClearance = fabClearance,
                 )
             }
-            composable<ExploreRoute> { ExploreScreen(onFirmClick = { nav.go(FirmRoute(it.id)) }) }
-            composable<NewsRoute> { NewsScreen(onArticleClick = { nav.go(ArticleRoute(it.id)) }) }
+            composable<ExploreRoute> { ExploreScreen(onFirmClick = { nav.go(FirmRoute(it.id)) }, bottomClearance = fabClearance) }
+            composable<NewsRoute> { NewsScreen(onArticleClick = { nav.go(ArticleRoute(it.id)) }, bottomClearance = fabClearance) }
             composable<AccountRoute> {
                 AccountScreen(
                     onLogin = { nav.go(LoginRoute) },
@@ -669,17 +675,26 @@ private fun MainNavigation(openLogin: Boolean, onLoginOpened: () -> Unit) {
     if (showCreateSheet && showCreateFab) {
         CreateChooserSheet(
             onDismiss = { showCreateSheet = false },
+            // Close the sheet only when the navigation will really happen: nav.go drops taps that arrive
+            // mid-transition, which would otherwise leave a closed sheet and no screen.
             onAddFirm = if (canManageFirms) ({
-                showCreateSheet = false
-                nav.go(NewFirmRoute)
+                if (nav.isIdle()) {
+                    showCreateSheet = false
+                    nav.go(NewFirmRoute)
+                }
             }) else null,
             onAddArticle = if (canManageArticles) ({
-                showCreateSheet = false
-                nav.go(NewArticleRoute)
+                if (nav.isIdle()) {
+                    showCreateSheet = false
+                    nav.go(NewArticleRoute)
+                }
             }) else null,
         )
     }
 }
+
+/** Space kept under scrolling lists so the create button never covers the last row. */
+private val FAB_CLEARANCE = 80.dp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -791,7 +806,7 @@ private fun screenName(route: String): String =
 // used to push the same screen twice or pop the last screen and leave a blank page.
 // Only the screen that is fully visible (RESUMED) may navigate.
 
-private fun NavHostController.isIdle(): Boolean =
+internal fun NavHostController.isIdle(): Boolean =
     currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED
 
 /** Navigate once, ignoring repeated taps during transitions. */

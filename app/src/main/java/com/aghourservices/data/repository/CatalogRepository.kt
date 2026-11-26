@@ -38,6 +38,10 @@ class CatalogRepository(private val api: AghourApi, private val json: Json) {
             api.firms(query = query?.trim()?.takeIf { it.isNotEmpty() }, categoryId = categoryId, page = page, perPage = perPage)
         }
 
+    /** Home's featured section: a random sample of visible firms, different on every load. Not pageable. */
+    suspend fun featuredFirms(count: Int): ApiResult<ListResponse<FirmDto>> =
+        safeApiCall(json) { api.firms(page = 1, perPage = count, sort = "random") }
+
     suspend fun firm(id: Long): ApiResult<FirmDto> =
         safeApiCall(json) { api.firm(id).data }
 

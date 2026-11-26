@@ -77,6 +77,8 @@ fun HomeScreen(
     onFirmClick: (FirmDto) -> Unit,
     onArticleClick: (ArticleDto) -> Unit,
     onSeeAllNews: () -> Unit,
+    /** Extra space under the content for the floating create button. */
+    bottomClearance: androidx.compose.ui.unit.Dp = 0.dp,
     /** null while plans are switched off: the banner stays, but is not a link. */
     onAddFirm: (() -> Unit)?,
     onNotifications: () -> Unit,
@@ -100,7 +102,7 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize().background(c.page),
     ) {
         Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(bottom = 24.dp),
+            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).statusBarsPadding().padding(bottom = 24.dp + bottomClearance),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // Greeting, bell and logo
