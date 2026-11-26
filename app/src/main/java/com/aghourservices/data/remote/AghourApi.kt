@@ -42,6 +42,8 @@ interface AghourApi {
         @Query("mine") mine: Boolean? = null,
         @Query("page") page: Int = 1,
         @Query("per_page") perPage: Int = 20,
+        /** "random" = a fresh sample each call; read page 1 only. Older servers ignore it (name order). */
+        @Query("sort") sort: String? = null,
     ): ListResponse<FirmDto>
 
     @GET("firms/{id}")

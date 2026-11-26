@@ -69,7 +69,7 @@ import com.aghourservices.ui.theme.Aghour
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewsScreen(onArticleClick: (ArticleDto) -> Unit) {
+fun NewsScreen(onArticleClick: (ArticleDto) -> Unit, bottomClearance: androidx.compose.ui.unit.Dp = 0.dp) {
     val container = appContainer()
     val vm: NewsViewModel = viewModel { NewsViewModel(container.catalog, container.admin.changes, container.analytics) }
     val state by vm.state.collectAsStateWithLifecycle()
@@ -123,7 +123,7 @@ fun NewsScreen(onArticleClick: (ArticleDto) -> Unit) {
                     else -> LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp + bottomClearance),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         itemsIndexed(state.articles, key = { _, a -> a.id }) { index, article ->

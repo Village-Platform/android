@@ -61,14 +61,16 @@ import com.aghourservices.ui.components.categoryIconUrl
 import com.aghourservices.ui.components.firmIconUrl
 import com.aghourservices.ui.theme.Aghour
 
+/** Pager key for the "all" page (category id null); real ids are positive. */
+private const val ALL_PAGE_KEY = -1L
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExploreScreen(onFirmClick: (FirmDto) -> Unit) {
+fun ExploreScreen(onFirmClick: (FirmDto) -> Unit, bottomClearance: androidx.compose.ui.unit.Dp = 0.dp) {
     val container = appContainer()
     val vm: ExploreViewModel = viewModel { ExploreViewModel(container.catalog, container.exploreCategory, container.admin.changes, container.analytics) }
     val state by vm.state.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
-    val listState = rememberLazyListState()
     val c = Aghour.colors
     StatusBarIcons()
 
@@ -86,20 +88,14 @@ fun ExploreScreen(onFirmClick: (FirmDto) -> Unit) {
         }
     }
     LaunchedEffect(pagerState.settledPage) {
-        if (isProgrammaticScroll) return@LaunchedEffect
+        // Before categories load there is only the "all" page; settling on it must not wipe the
+        // category picked on Home.
+        if (isProgrammaticScroll || state.categories.isEmpty()) return@LaunchedEffect
         val selectedId = categoryIds.getOrNull(pagerState.settledPage)
         if (selectedId != state.categoryId) {
             vm.selectCategory(selectedId)
         }
     }
-
-    val reachedEnd by remember {
-        derivedStateOf {
-            val last = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            last >= listState.layoutInfo.totalItemsCount - 3
-        }
-    }
-    LaunchedEffect(reachedEnd, state.canLoadMore) { if (reachedEnd && state.canLoadMore) vm.loadMore() }
 
     Column(Modifier.fillMaxSize().background(c.page)) {
         Column(Modifier.statusBarsPadding().padding(top = 12.dp, bottom = 8.dp)) {
@@ -143,16 +139,36 @@ fun ExploreScreen(onFirmClick: (FirmDto) -> Unit) {
             }
         }
 
-        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { _ ->
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            key = { page -> categoryIds.getOrNull(page) ?: ALL_PAGE_KEY },
+        ) { page ->
+            // One scroll state per page. A LazyListState can drive only one LazyColumn: sharing it
+            // across pages (they all compose while the pager animates to a category picked on Home)
+            // left it bound to a disposed list, so scrolling and load-more stopped working.
+            val listState = rememberLazyListState()
+            // The VM holds firms for the selected category only; other pages show a skeleton.
+            val isCurrent = categoryIds.getOrNull(page) == state.categoryId
+            if (isCurrent) {
+                val reachedEnd by remember(listState) {
+                    derivedStateOf {
+                        val info = listState.layoutInfo
+                        val last = info.visibleItemsInfo.lastOrNull()?.index ?: return@derivedStateOf false
+                        last >= info.totalItemsCount - 3
+                    }
+                }
+                LaunchedEffect(reachedEnd, state.canLoadMore) { if (reachedEnd && state.canLoadMore) vm.loadMore() }
+            }
             PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = vm::refresh, modifier = Modifier.fillMaxSize()) {
                 when {
-                    state.loading -> SkeletonRows(modifier = Modifier.padding(16.dp))
+                    !isCurrent || state.loading -> SkeletonRows(modifier = Modifier.padding(16.dp))
                     state.error != null && state.firms.isEmpty() -> MessageBox(state.error!!, onRetry = vm::reload)
                     state.firms.isEmpty() -> MessageBox(stringResource(R.string.no_firms))
                     else -> LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp + bottomClearance),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         items(state.firms, key = { it.id }) { firm ->

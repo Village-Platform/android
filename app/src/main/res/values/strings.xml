@@ -276,4 +276,11 @@
     <string name="submission_success_title">تم إرسال الطلب بنجاح</string>
     <string name="firm_sent_for_review_message">تم إرسال بيانات المنشأة بنجاح إلى الخادم، وهي الآن قيد المراجعة لدى الإدارة وستظهر للجميع فور الموافقة عليها.</string>
     <string name="article_sent_for_review_message">تم إرسال الخبر بنجاح إلى الخادم، وهو الآن قيد المراجعة لدى الإدارة وسيظهر للجميع فور الموافقة عليه.</string>
+
+    <!-- Create chooser entry point -->
+    <string name="create_content">إضافة</string>
+    <string name="create_choose_title">ماذا تريد أن تضيف؟</string>
+    <string name="add_firm_hint">أضف نشاطًا أو خدمة لدليل القرية</string>
+    <string name="add_article_option">إضافة خبر / مقال</string>
+    <string name="add_article_hint">انشر خبرًا أو إعلانًا أو مقالًا لأهل القرية</string>
 </resources>
